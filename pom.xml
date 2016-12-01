@@ -9,7 +9,7 @@
 
     <groupId>com.github.speedwing</groupId>
     <artifactId>log4j-cloudwatch-appender</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -43,7 +43,7 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-logs</artifactId>
-            <version>1.11.29</version>
+            <version>1.11.62</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
