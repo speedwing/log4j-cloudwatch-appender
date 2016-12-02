@@ -9,7 +9,7 @@
 
     <groupId>com.github.speedwing</groupId>
     <artifactId>log4j-cloudwatch-appender</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
     <packaging>jar</packaging>
 
     <properties>
