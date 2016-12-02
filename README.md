@@ -1,4 +1,4 @@
-# log4j-cloudwatch-appener
+# log4j-cloudwatch-appender
 
 Log4j Cloudwatch Appender is a simple to use Log4j Appender that allows you to stream your application logs directly into your [AWS Cloudwatch Logs](http://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/WhatIsCloudWatchLogs.html).
 
