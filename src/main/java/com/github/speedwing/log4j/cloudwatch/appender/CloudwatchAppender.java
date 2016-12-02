@@ -19,18 +19,38 @@ import static java.util.stream.Collectors.toList;
 
 public class CloudwatchAppender extends AppenderSkeleton {
 
+    private final Boolean DEBUG_MODE = System.getProperty("log4j.debug") != null;
+
+    /**
+     * The queue used to buffer log entries
+     */
     private LinkedBlockingQueue<LoggingEvent> loggingEventsQueue;
 
+    /**
+     * the AWS Cloudwatch Logs API client
+     */
     private AWSLogsClient awsLogsClient;
 
     private AtomicReference<String> lastSequenceToken = new AtomicReference<>();
 
+    /**
+     * The AWS Cloudwatch Log group name
+     */
     private String logGroupName;
 
+    /**
+     * The AWS Cloudwatch Log stream name
+     */
     private String logStreamName;
 
+    /**
+     * The queue / buffer size
+     */
     private int queueLength = 1024;
 
+    /**
+     * The maximum number of log entries to send in one go to the AWS Cloudwatch Log service
+     */
     private int messagesBatchSize = 128;
 
     private AtomicBoolean cloudwatchAppenderInitialised = new AtomicBoolean(false);
@@ -102,17 +122,22 @@ public class CloudwatchAppender extends AppenderSkeleton {
                     putLogEventsRequest.setSequenceToken(invalidSequenceTokenException.getExpectedSequenceToken());
                     PutLogEventsResult result = awsLogsClient.putLogEvents(putLogEventsRequest);
                     lastSequenceToken.set(result.getNextSequenceToken());
+                    if (DEBUG_MODE) {
+                        invalidSequenceTokenException.printStackTrace();
+                    }
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            if (DEBUG_MODE) {
+                e.printStackTrace();
+            }
         }
 
     }
 
     @Override
     public void close() {
-        while (!loggingEventsQueue.isEmpty()) {
+        while (loggingEventsQueue != null && !loggingEventsQueue.isEmpty()) {
             this.sendMessages();
         }
     }
@@ -125,14 +150,23 @@ public class CloudwatchAppender extends AppenderSkeleton {
     @Override
     public void activateOptions() {
         super.activateOptions();
-        this.awsLogsClient = new AWSLogsClient();
-        loggingEventsQueue = new LinkedBlockingQueue<>(queueLength);
-        try {
-            initializeCloudwatchResources();
-            initCloudwatchDaemon();
-            cloudwatchAppenderInitialised.set(true);
-        } catch (Exception e) {
-            Logger.getRootLogger().error("Could not initialise Cloudwatch Logs for LogGroupName: " + logGroupName + " and LogStreamName: " + logStreamName, e);
+        if (isBlank(logGroupName) || isBlank(logStreamName)) {
+            Logger.getRootLogger().error("Could not initialise CloudwatchAppender because either or both LogGroupName(" + logGroupName + ") and LogStreamName(" + logStreamName + ") are null or empty");
+            this.close();
+        } else {
+            this.awsLogsClient = new AWSLogsClient();
+            loggingEventsQueue = new LinkedBlockingQueue<>(queueLength);
+            try {
+                initializeCloudwatchResources();
+                initCloudwatchDaemon();
+                cloudwatchAppenderInitialised.set(true);
+            } catch (Exception e) {
+                Logger.getRootLogger().error("Could not initialise Cloudwatch Logs for LogGroupName: " + logGroupName + " and LogStreamName: " + logStreamName, e);
+                if (DEBUG_MODE) {
+                    System.err.println("Could not initialise Cloudwatch Logs for LogGroupName: " + logGroupName + " and LogStreamName: " + logStreamName);
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -145,6 +179,9 @@ public class CloudwatchAppender extends AppenderSkeleton {
                     }
                     Thread.currentThread().sleep(20L);
                 } catch (InterruptedException e) {
+                    if (DEBUG_MODE) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }).start();
@@ -182,6 +219,10 @@ public class CloudwatchAppender extends AppenderSkeleton {
             awsLogsClient.createLogStream(createLogStreamRequest);
         }
 
+    }
+
+    private boolean isBlank(String string) {
+        return null == string || string.trim().length() == 0;
     }
 
 }
