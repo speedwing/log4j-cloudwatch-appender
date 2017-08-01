@@ -90,6 +90,11 @@ public class CloudwatchAppender extends AppenderSkeleton {
 
     @Override
     protected void append(LoggingEvent event) {
+        // Make sure that we don't get stuck in an infinite loop
+        if (event.getLocationInformation().getClassName().startsWith("com.amazonaws")) {
+            return;
+        }
+    
         if (cloudwatchAppenderInitialised.get()) {
             loggingEventsQueue.offer(event);
         } else {
