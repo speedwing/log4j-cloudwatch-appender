@@ -15,6 +15,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 
 public class CloudwatchAppender extends AppenderSkeleton {
@@ -98,7 +99,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
     }
 
     private void sendMessages() {
-        synchronized(sendMessagesLock) {
+        synchronized (sendMessagesLock) {
             LoggingEvent polledLoggingEvent;
 
             List<LoggingEvent> loggingEvents = new ArrayList<>();
@@ -111,7 +112,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
 
                 List<InputLogEvent> inputLogEvents = loggingEvents.stream()
                         .map(loggingEvent -> new InputLogEvent().withTimestamp(loggingEvent.getTimeStamp()).withMessage(layout.format(loggingEvent)))
-                        .sorted((e1, e2) -> e1.getTimestamp().compareTo(e2.getTimestamp()))
+                        .sorted(comparing(InputLogEvent::getTimestamp))
                         .collect(toList());
 
                 if (!inputLogEvents.isEmpty()) {
