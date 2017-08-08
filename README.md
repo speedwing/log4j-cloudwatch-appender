@@ -9,6 +9,8 @@ The central (and unique!) class of this library is `com.github.speedwing.log4j.c
 * general filters
 * lifecycle management
 
+**NOTE:** a potential infinite-loop-kind of issue has been found when `com.amazonaws` classes push logs via `CloudwatchAppen`. Check below for more info
+
 ## Programmatic Configuration
  
 The `CloudwatchAppender` can be configure either via properties file (see next paragraph) or programmatically in your codebase.
@@ -71,4 +73,27 @@ The default value for `messagesBatchSize` is 128
 
 ### The log4j.debug flag
 The `CloudwatchAppender` honors the `log4j.debug` flag and will print extra logging info on the standard out / err.
-  
+
+### Gotchas
+First of all thanks to [jramsey139](https://github.com/jramsey139) for finding and fixing a couple of issues.
+
+The `CloudwatchAppender` soffers of a potential infinite-look-like issue when `com.amazonaws` classes push logs to the 
+ `CloudwatchAppender`. Of course if you're using the this `Appender` you want logs to be pushed to Amazon, but at the 
+ same time you don't want to break your service. For this reason I may recommend to either
+ 
+ * log `com.amazonaws` only to Console or File
+ * raise the level of logging for `com.amazonaws` at least to `WARN`, or even better to `ERROR` so that, when everything
+ works fine, there are no risks to incur into crazy infinity loops.
+ 
+ 
+Some example on how to tweak the configuration.
+
+Logging only errors from `com.amazonaws` to Cloudwatch logs
+```properties
+log4j.appender.CW.com.amazonaws=ERROR
+```
+
+Turning off `com.amazonaws` logs altogether 
+```properties
+log4j.appender.CW.com.amazonaws=off
+```
