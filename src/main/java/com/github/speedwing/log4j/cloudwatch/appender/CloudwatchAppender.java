@@ -90,11 +90,6 @@ public class CloudwatchAppender extends AppenderSkeleton {
 
     @Override
     protected void append(LoggingEvent event) {
-        // Make sure that we don't get stuck in an infinite loop
-        if (event.getLocationInformation().getClassName().startsWith("com.amazonaws")) {
-            return;
-        }
-    
         if (cloudwatchAppenderInitialised.get()) {
             loggingEventsQueue.offer(event);
         } else {
@@ -116,6 +111,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
 
                 List<InputLogEvent> inputLogEvents = loggingEvents.stream()
                         .map(loggingEvent -> new InputLogEvent().withTimestamp(loggingEvent.getTimeStamp()).withMessage(layout.format(loggingEvent)))
+                        .sorted((e1, e2) -> e1.getTimestamp().compareTo(e2.getTimestamp()))
                         .collect(toList());
 
                 if (!inputLogEvents.isEmpty()) {
