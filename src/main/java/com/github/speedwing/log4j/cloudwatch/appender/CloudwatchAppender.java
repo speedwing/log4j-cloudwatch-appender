@@ -22,6 +22,11 @@ public class CloudwatchAppender extends AppenderSkeleton {
     private final Boolean DEBUG_MODE = System.getProperty("log4j.debug") != null;
 
     /**
+     * Used to make sure that on close() our daemon thread isn't also trying to sendMessage()s
+     */
+    private Object sendMessagesLock = new Object();
+
+    /**
      * The queue used to buffer log entries
      */
     private LinkedBlockingQueue<LoggingEvent> loggingEventsQueue;
@@ -92,47 +97,49 @@ public class CloudwatchAppender extends AppenderSkeleton {
         }
     }
 
-    private synchronized void sendMessages() {
-        LoggingEvent polledLoggingEvent;
+    private void sendMessages() {
+        synchronized(sendMessagesLock) {
+            LoggingEvent polledLoggingEvent;
 
-        List<LoggingEvent> loggingEvents = new ArrayList<>();
+            List<LoggingEvent> loggingEvents = new ArrayList<>();
 
-        try {
+            try {
 
-            while ((polledLoggingEvent = loggingEventsQueue.poll()) != null && loggingEvents.size() <= messagesBatchSize) {
-                loggingEvents.add(polledLoggingEvent);
-            }
+                while ((polledLoggingEvent = loggingEventsQueue.poll()) != null && loggingEvents.size() <= messagesBatchSize) {
+                    loggingEvents.add(polledLoggingEvent);
+                }
 
-            List<InputLogEvent> inputLogEvents = loggingEvents.stream()
-                    .map(loggingEvent -> new InputLogEvent().withTimestamp(loggingEvent.getTimeStamp()).withMessage(layout.format(loggingEvent)))
-                    .collect(toList());
+                List<InputLogEvent> inputLogEvents = loggingEvents.stream()
+                        .map(loggingEvent -> new InputLogEvent().withTimestamp(loggingEvent.getTimeStamp()).withMessage(layout.format(loggingEvent)))
+                        .sorted((e1, e2) -> e1.getTimestamp().compareTo(e2.getTimestamp()))
+                        .collect(toList());
 
-            if (!inputLogEvents.isEmpty()) {
+                if (!inputLogEvents.isEmpty()) {
 
-                PutLogEventsRequest putLogEventsRequest = new PutLogEventsRequest(
-                        logGroupName,
-                        logStreamName,
-                        inputLogEvents);
+                    PutLogEventsRequest putLogEventsRequest = new PutLogEventsRequest(
+                            logGroupName,
+                            logStreamName,
+                            inputLogEvents);
 
-                try {
-                    putLogEventsRequest.setSequenceToken(lastSequenceToken.get());
-                    PutLogEventsResult result = awsLogsClient.putLogEvents(putLogEventsRequest);
-                    lastSequenceToken.set(result.getNextSequenceToken());
-                } catch (InvalidSequenceTokenException invalidSequenceTokenException) {
-                    putLogEventsRequest.setSequenceToken(invalidSequenceTokenException.getExpectedSequenceToken());
-                    PutLogEventsResult result = awsLogsClient.putLogEvents(putLogEventsRequest);
-                    lastSequenceToken.set(result.getNextSequenceToken());
-                    if (DEBUG_MODE) {
-                        invalidSequenceTokenException.printStackTrace();
+                    try {
+                        putLogEventsRequest.setSequenceToken(lastSequenceToken.get());
+                        PutLogEventsResult result = awsLogsClient.putLogEvents(putLogEventsRequest);
+                        lastSequenceToken.set(result.getNextSequenceToken());
+                    } catch (InvalidSequenceTokenException invalidSequenceTokenException) {
+                        putLogEventsRequest.setSequenceToken(invalidSequenceTokenException.getExpectedSequenceToken());
+                        PutLogEventsResult result = awsLogsClient.putLogEvents(putLogEventsRequest);
+                        lastSequenceToken.set(result.getNextSequenceToken());
+                        if (DEBUG_MODE) {
+                            invalidSequenceTokenException.printStackTrace();
+                        }
                     }
                 }
-            }
-        } catch (Exception e) {
-            if (DEBUG_MODE) {
-                e.printStackTrace();
+            } catch (Exception e) {
+                if (DEBUG_MODE) {
+                    e.printStackTrace();
+                }
             }
         }
-
     }
 
     @Override
