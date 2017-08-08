@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <name>log4j-cloudwatch-appender</name>
@@ -9,7 +8,7 @@
 
     <groupId>com.github.speedwing</groupId>
     <artifactId>log4j-cloudwatch-appender</artifactId>
-    <version>0.0.3-SNAPSHOT</version>
+    <version>0.0.4-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -28,7 +27,8 @@
         <connection>scm:git:github.com/speedwing/log4j-cloudwatch-appender.git</connection>
         <developerConnection>scm:git:git@github.com:speedwing/log4j-cloudwatch-appender.git</developerConnection>
         <url>github.com/speedwing/log4j-cloudwatch-appender</url>
-    </scm>
+      <tag>HEAD</tag>
+  </scm>
 
     <developers>
         <developer>
