@@ -43,7 +43,7 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-logs</artifactId>
-            <version>1.11.62</version>
+            <version>1.11.176</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
