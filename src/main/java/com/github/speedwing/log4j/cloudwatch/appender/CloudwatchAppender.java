@@ -126,7 +126,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
                         PutLogEventsResult result = awsLogsClient.putLogEvents(putLogEventsRequest);
                         lastSequenceToken.set(result.getNextSequenceToken());
                     } catch (DataAlreadyAcceptedException dataAlreadyAcceptedExcepted) {
-                    	putLogEventsRequest.setSequenceToken(dataAlreadyAcceptedExcepted.getExpectedSequenceToken());
+                        putLogEventsRequest.setSequenceToken(dataAlreadyAcceptedExcepted.getExpectedSequenceToken());
                         PutLogEventsResult result = awsLogsClient.putLogEvents(putLogEventsRequest);
                         lastSequenceToken.set(result.getNextSequenceToken());
                         if (DEBUG_MODE) {
