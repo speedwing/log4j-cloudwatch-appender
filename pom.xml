@@ -27,7 +27,6 @@
         <connection>scm:git:github.com/speedwing/log4j-cloudwatch-appender.git</connection>
         <developerConnection>scm:git:git@github.com:speedwing/log4j-cloudwatch-appender.git</developerConnection>
         <url>github.com/speedwing/log4j-cloudwatch-appender</url>
-      <tag>HEAD</tag>
   </scm>
 
     <developers>
