@@ -47,6 +47,7 @@ log4j.appender.CloudW.layout=org.apache.log4j.PatternLayout
 log4j.appender.CloudW.layout.ConversionPattern=%d [%t] %-5p %c - %m%n
 log4j.appender.CloudW.logGroupName=MyLogGroupName
 log4j.appender.CloudW.logStreamName=MyLogStreamName
+log4j.appender.CloudW.region=us-east-2
 log4j.appender.CloudW.queueLength=2048
 log4j.appender.CloudW.messagesBatchSize=512
 

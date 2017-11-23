@@ -1,6 +1,5 @@
 package com.github.speedwing.log4j.cloudwatch.appender;
 
-
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.logs.AWSLogs;
@@ -53,6 +52,11 @@ public class CloudwatchAppender extends AppenderSkeleton {
     private String logStreamName;
 
     /**
+     * The AWS region
+     */
+    private String region = null;
+
+    /**
      * The queue / buffer size
      */
     private int queueLength = 1024;
@@ -68,14 +72,14 @@ public class CloudwatchAppender extends AppenderSkeleton {
         super();
     }
 
-    public CloudwatchAppender(Layout layout, String logGroupName, String logStreamName) {
+    public CloudwatchAppender(Layout layout, String logGroupName, String logStreamName, String region) {
         super();
         this.setLayout(layout);
         this.setLogGroupName(logGroupName);
         this.setLogStreamName(logStreamName);
+        this.setRegion(region);
         this.activateOptions();
     }
-
 
 
     public void setLogGroupName(String logGroupName) {
@@ -84,6 +88,10 @@ public class CloudwatchAppender extends AppenderSkeleton {
 
     public void setLogStreamName(String logStreamName) {
         this.logStreamName = logStreamName;
+    }
+
+    public void setRegion(String region) {
+        this.region = region;
     }
 
     public void setQueueLength(int queueLength) {
@@ -167,17 +175,22 @@ public class CloudwatchAppender extends AppenderSkeleton {
         return true;
     }
 
-    protected Regions getRegion() {
-        // Try first for an environment variable
-        String configuredDefaultRegion = System.getenv("AWS_DEFAULT_REGION");
-        if (configuredDefaultRegion!=null) {
-            return Regions.fromName(configuredDefaultRegion);
-        }
+    private Regions getAwsRegion() {
 
-        // Try and get our current region...
-        Region region = Regions.getCurrentRegion();
-        if (region!=null) {
-            return Regions.fromName(region.getName());
+        if (this.region != null) {
+            return Regions.fromName(this.region);
+        } else {
+            // Try first for an environment variable
+            String configuredDefaultRegion = System.getenv("AWS_DEFAULT_REGION");
+            if (configuredDefaultRegion != null) {
+                return Regions.fromName(configuredDefaultRegion);
+            }
+
+            // Try and get our current region...
+            Region region = Regions.getCurrentRegion();
+            if (region != null) {
+                return Regions.fromName(region.getName());
+            }
         }
 
         // Default to us-east-1
@@ -191,11 +204,10 @@ public class CloudwatchAppender extends AppenderSkeleton {
             Logger.getRootLogger().error("Could not initialise CloudwatchAppender because either or both LogGroupName(" + logGroupName + ") and LogStreamName(" + logStreamName + ") are null or empty");
             this.close();
         } else {
-
-
-
-            Regions region = getRegion();
-            this.awsLogsClient = AWSLogsClientBuilder.standard().withRegion(region).build();
+            this.awsLogsClient = AWSLogsClientBuilder
+                    .standard()
+                    .withRegion(this.getAwsRegion())
+                    .build();
             loggingEventsQueue = new LinkedBlockingQueue<>(queueLength);
             try {
                 initializeCloudwatchResources();
