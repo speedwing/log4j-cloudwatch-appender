@@ -1,7 +1,10 @@
 package com.github.speedwing.log4j.cloudwatch.appender;
 
 
-import com.amazonaws.services.logs.AWSLogsClient;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.logs.AWSLogs;
+import com.amazonaws.services.logs.AWSLogsClientBuilder;
 import com.amazonaws.services.logs.model.*;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Layout;
@@ -35,7 +38,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
     /**
      * the AWS Cloudwatch Logs API client
      */
-    private AWSLogsClient awsLogsClient;
+    private AWSLogs awsLogsClient;
 
     private AtomicReference<String> lastSequenceToken = new AtomicReference<>();
 
@@ -72,6 +75,8 @@ public class CloudwatchAppender extends AppenderSkeleton {
         this.setLogStreamName(logStreamName);
         this.activateOptions();
     }
+
+
 
     public void setLogGroupName(String logGroupName) {
         this.logGroupName = logGroupName;
@@ -162,6 +167,23 @@ public class CloudwatchAppender extends AppenderSkeleton {
         return true;
     }
 
+    protected Regions getRegion() {
+        // Try first for an environment variable
+        String configuredDefaultRegion = System.getenv("AWS_DEFAULT_REGION");
+        if (configuredDefaultRegion!=null) {
+            return Regions.fromName(configuredDefaultRegion);
+        }
+
+        // Try and get our current region...
+        Region region = Regions.getCurrentRegion();
+        if (region!=null) {
+            return Regions.fromName(region.getName());
+        }
+
+        // Default to us-east-1
+        return Regions.US_EAST_1;
+    }
+
     @Override
     public void activateOptions() {
         super.activateOptions();
@@ -169,7 +191,11 @@ public class CloudwatchAppender extends AppenderSkeleton {
             Logger.getRootLogger().error("Could not initialise CloudwatchAppender because either or both LogGroupName(" + logGroupName + ") and LogStreamName(" + logStreamName + ") are null or empty");
             this.close();
         } else {
-            this.awsLogsClient = new AWSLogsClient();
+
+
+
+            Regions region = getRegion();
+            this.awsLogsClient = AWSLogsClientBuilder.standard().withRegion(region).build();
             loggingEventsQueue = new LinkedBlockingQueue<>(queueLength);
             try {
                 initializeCloudwatchResources();
