@@ -98,3 +98,8 @@ Turning off `com.amazonaws` logs altogether
 ```properties
 log4j.appender.CW.com.amazonaws=off
 ```
+
+# How to release
+```bash
+mvn clean deploy
+```
