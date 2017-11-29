@@ -54,7 +54,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
     /**
      * The AWS region
      */
-    private String region = null;
+    private Optional<String> region = Optional.empty();
 
     /**
      * The queue / buffer size
@@ -80,7 +80,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
         super();
     }
 
-    public CloudwatchAppender(Layout layout, String logGroupName, String logStreamName, String region) {
+    public CloudwatchAppender(Layout layout, String logGroupName, String logStreamName, Optional<String> region) {
         super();
         this.setLayout(layout);
         this.setLogGroupName(logGroupName);
@@ -98,7 +98,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
         this.logStreamName = logStreamName;
     }
 
-    public void setRegion(String region) {
+    public void setRegion(Optional<String> region) {
         this.region = region;
     }
 
@@ -186,8 +186,8 @@ public class CloudwatchAppender extends AppenderSkeleton {
 
     private Regions getAwsRegion() {
 
-        if (this.region != null) {
-            return Regions.fromName(this.region);
+        if (this.region.isPresent()) {
+            return Regions.fromName(this.region.get());
         } else {
             // Try first for an environment variable
             String configuredDefaultRegion = System.getenv("AWS_DEFAULT_REGION");
