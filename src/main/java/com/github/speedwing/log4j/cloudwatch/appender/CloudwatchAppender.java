@@ -66,7 +66,15 @@ public class CloudwatchAppender extends AppenderSkeleton {
      */
     private int messagesBatchSize = 128;
 
+    /**
+     * True if the cloudwatch appender resources have been correctly initialised
+     */
     private AtomicBoolean cloudwatchAppenderInitialised = new AtomicBoolean(false);
+
+    /**
+     * Used to keep the daemon thread alive.
+     */
+    private AtomicBoolean keepDaemonActive = new AtomicBoolean(false);
 
     public CloudwatchAppender() {
         super();
@@ -168,6 +176,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
         while (loggingEventsQueue != null && !loggingEventsQueue.isEmpty()) {
             this.sendMessages();
         }
+        keepDaemonActive.set(false);
     }
 
     @Override
@@ -211,6 +220,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
             loggingEventsQueue = new LinkedBlockingQueue<>(queueLength);
             try {
                 initializeCloudwatchResources();
+                keepDaemonActive.set(true);
                 initCloudwatchDaemon();
                 cloudwatchAppenderInitialised.set(true);
             } catch (Exception e) {
@@ -225,7 +235,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
 
     private void initCloudwatchDaemon() {
         new Thread(() -> {
-            while (true) {
+            while (keepDaemonActive.get()) {
                 try {
                     if (loggingEventsQueue.size() > 0) {
                         sendMessages();
