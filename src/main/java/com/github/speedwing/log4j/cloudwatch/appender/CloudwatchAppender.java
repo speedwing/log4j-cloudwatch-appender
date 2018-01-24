@@ -234,7 +234,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
     }
 
     private void initCloudwatchDaemon() {
-        new Thread(() -> {
+        Thread t = new Thread(() -> {
             while (keepDaemonActive.get()) {
                 try {
                     if (loggingEventsQueue.size() > 0) {
@@ -247,7 +247,10 @@ public class CloudwatchAppender extends AppenderSkeleton {
                     }
                 }
             }
-        }).start();
+        });
+        t.setName(CloudwatchAppender.class.getSimpleName() + " daemon thread");
+        t.setDaemon(true);
+        t.start();
     }
 
     private void initializeCloudwatchResources() {
