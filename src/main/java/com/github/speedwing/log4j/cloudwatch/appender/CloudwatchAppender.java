@@ -131,7 +131,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
                 }
 
                 List<InputLogEvent> inputLogEvents = loggingEvents.stream()
-                        .map(loggingEvent -> InputLogEvent.builder().timestamp(loggingEvent.getTimeStamp()).message(layout.format(loggingEvent)))
+                        .map(loggingEvent -> InputLogEvent.builder().timestamp(loggingEvent.getTimeStamp()).message(layout.format(loggingEvent)).build())
                         .sorted(comparing(InputLogEvent::timestamp))
                         .collect(toList());
 
