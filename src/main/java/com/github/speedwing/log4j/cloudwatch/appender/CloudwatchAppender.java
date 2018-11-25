@@ -1,7 +1,7 @@
 package com.github.speedwing.log4j.cloudwatch.appender;
 
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.regions.internal.util.EC2MetadataUtils;
+import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
 import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient;
 import software.amazon.awssdk.services.cloudwatchlogs.model.*;
 import org.apache.log4j.AppenderSkeleton;
@@ -185,16 +185,10 @@ public class CloudwatchAppender extends AppenderSkeleton {
         if (this.region.isPresent()) {
             return Region.of(this.region.get());
         } else {
-            // Try first for an environment variable
-            String configuredDefaultRegion = System.getenv("AWS_DEFAULT_REGION");
-            if (configuredDefaultRegion != null) {
-                return Region.of(configuredDefaultRegion);
-            }
-
-            // if code is running in EC2, use current EC2 region
-            Optional<String> ec2Region = Optional.of(EC2MetadataUtils.getEC2InstanceRegion());
-            if (ec2Region.isPresent()) {
-                return Region.of(ec2Region.get());
+            DefaultAwsRegionProviderChain chain = new DefaultAwsRegionProviderChain();
+            Region r = chain.getRegion();
+            if (r != null) {
+                return r;
             }
         }
 
