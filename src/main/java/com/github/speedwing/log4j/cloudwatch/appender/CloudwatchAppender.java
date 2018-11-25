@@ -1,7 +1,7 @@
 package com.github.speedwing.log4j.cloudwatch.appender;
 
-import software.amazon.awssdk.core.regions.Region;
-import software.amazon.awssdk.core.util.EC2MetadataUtils;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.regions.internal.util.EC2MetadataUtils;
 import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient;
 import software.amazon.awssdk.services.cloudwatchlogs.model.*;
 import org.apache.log4j.AppenderSkeleton;
