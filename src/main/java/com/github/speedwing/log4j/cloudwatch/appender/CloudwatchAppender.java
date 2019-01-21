@@ -1,10 +1,9 @@
 package com.github.speedwing.log4j.cloudwatch.appender;
 
-import com.amazonaws.regions.Region;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.logs.AWSLogs;
-import com.amazonaws.services.logs.AWSLogsClientBuilder;
-import com.amazonaws.services.logs.model.*;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
+import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient;
+import software.amazon.awssdk.services.cloudwatchlogs.model.*;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Layout;
 import org.apache.log4j.Logger;
@@ -37,7 +36,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
     /**
      * the AWS Cloudwatch Logs API client
      */
-    private AWSLogs awsLogsClient;
+    private CloudWatchLogsClient awsLogsClient;
 
     private AtomicReference<String> lastSequenceToken = new AtomicReference<>();
 
@@ -132,32 +131,29 @@ public class CloudwatchAppender extends AppenderSkeleton {
                 }
 
                 List<InputLogEvent> inputLogEvents = loggingEvents.stream()
-                        .map(loggingEvent -> new InputLogEvent().withTimestamp(loggingEvent.getTimeStamp()).withMessage(layout.format(loggingEvent)))
-                        .sorted(comparing(InputLogEvent::getTimestamp))
+                        .map(loggingEvent -> InputLogEvent.builder().timestamp(loggingEvent.getTimeStamp()).message(layout.format(loggingEvent)).build())
+                        .sorted(comparing(InputLogEvent::timestamp))
                         .collect(toList());
 
                 if (!inputLogEvents.isEmpty()) {
 
-                    PutLogEventsRequest putLogEventsRequest = new PutLogEventsRequest(
-                            logGroupName,
-                            logStreamName,
-                            inputLogEvents);
+                    PutLogEventsRequest putLogEventsRequest = PutLogEventsRequest.builder()
+                            .logGroupName(logGroupName)
+                            .logGroupName(logStreamName)
+                            .logEvents(inputLogEvents).build();
 
                     try {
-                        putLogEventsRequest.setSequenceToken(lastSequenceToken.get());
-                        PutLogEventsResult result = awsLogsClient.putLogEvents(putLogEventsRequest);
-                        lastSequenceToken.set(result.getNextSequenceToken());
+                        PutLogEventsResponse result = awsLogsClient.putLogEvents(putLogEventsRequest.copy(r -> r.sequenceToken(lastSequenceToken.get())));
+                        lastSequenceToken.set(result.nextSequenceToken());
                     } catch (DataAlreadyAcceptedException dataAlreadyAcceptedExcepted) {
-                        putLogEventsRequest.setSequenceToken(dataAlreadyAcceptedExcepted.getExpectedSequenceToken());
-                        PutLogEventsResult result = awsLogsClient.putLogEvents(putLogEventsRequest);
-                        lastSequenceToken.set(result.getNextSequenceToken());
+                        PutLogEventsResponse result = awsLogsClient.putLogEvents(putLogEventsRequest.copy(r -> r.sequenceToken(dataAlreadyAcceptedExcepted.expectedSequenceToken())));
+                        lastSequenceToken.set(result.nextSequenceToken());
                         if (DEBUG_MODE) {
                             dataAlreadyAcceptedExcepted.printStackTrace();
                         }
                     } catch (InvalidSequenceTokenException invalidSequenceTokenException) {
-                        putLogEventsRequest.setSequenceToken(invalidSequenceTokenException.getExpectedSequenceToken());
-                        PutLogEventsResult result = awsLogsClient.putLogEvents(putLogEventsRequest);
-                        lastSequenceToken.set(result.getNextSequenceToken());
+                        PutLogEventsResponse result = awsLogsClient.putLogEvents(putLogEventsRequest.copy(r -> r.sequenceToken(invalidSequenceTokenException.expectedSequenceToken())));
+                        lastSequenceToken.set(result.nextSequenceToken());
                         if (DEBUG_MODE) {
                             invalidSequenceTokenException.printStackTrace();
                         }
@@ -184,26 +180,20 @@ public class CloudwatchAppender extends AppenderSkeleton {
         return true;
     }
 
-    private Regions getAwsRegion() {
+    private Region getAwsRegion() {
 
         if (this.region.isPresent()) {
-            return Regions.fromName(this.region.get());
+            return Region.of(this.region.get());
         } else {
-            // Try first for an environment variable
-            String configuredDefaultRegion = System.getenv("AWS_DEFAULT_REGION");
-            if (configuredDefaultRegion != null) {
-                return Regions.fromName(configuredDefaultRegion);
-            }
-
-            // Try and get our current region...
-            Region region = Regions.getCurrentRegion();
-            if (region != null) {
-                return Regions.fromName(region.getName());
+            DefaultAwsRegionProviderChain chain = new DefaultAwsRegionProviderChain();
+            Region r = chain.getRegion();
+            if (r != null) {
+                return r;
             }
         }
 
         // Default to us-east-1
-        return Regions.US_EAST_1;
+        return Region.US_EAST_1;
     }
 
     @Override
@@ -213,9 +203,8 @@ public class CloudwatchAppender extends AppenderSkeleton {
             Logger.getRootLogger().error("Could not initialise CloudwatchAppender because either or both LogGroupName(" + logGroupName + ") and LogStreamName(" + logStreamName + ") are null or empty");
             this.close();
         } else {
-            this.awsLogsClient = AWSLogsClientBuilder
-                    .standard()
-                    .withRegion(this.getAwsRegion())
+            this.awsLogsClient = CloudWatchLogsClient.builder()
+                    .region(this.getAwsRegion())
                     .build();
             loggingEventsQueue = new LinkedBlockingQueue<>(queueLength);
             try {
@@ -255,33 +244,34 @@ public class CloudwatchAppender extends AppenderSkeleton {
 
     private void initializeCloudwatchResources() {
 
-        DescribeLogGroupsRequest describeLogGroupsRequest = new DescribeLogGroupsRequest();
-        describeLogGroupsRequest.setLogGroupNamePrefix(logGroupName);
+        DescribeLogGroupsRequest describeLogGroupsRequest = DescribeLogGroupsRequest.builder()
+                .logGroupNamePrefix(logGroupName)
+                .build();
 
         Optional<LogGroup> logGroupOptional = awsLogsClient
                 .describeLogGroups(describeLogGroupsRequest)
-                .getLogGroups()
+                .logGroups()
                 .stream()
-                .filter(logGroup -> logGroup.getLogGroupName().equals(logGroupName))
+                .filter(logGroup -> logGroup.logGroupName().equals(logGroupName))
                 .findFirst();
 
         if (!logGroupOptional.isPresent()) {
-            CreateLogGroupRequest createLogGroupRequest = new CreateLogGroupRequest().withLogGroupName(logGroupName);
+            CreateLogGroupRequest createLogGroupRequest = CreateLogGroupRequest.builder().logGroupName(logGroupName).build();
             awsLogsClient.createLogGroup(createLogGroupRequest);
         }
 
-        DescribeLogStreamsRequest describeLogStreamsRequest = new DescribeLogStreamsRequest().withLogGroupName(logGroupName).withLogStreamNamePrefix(logStreamName);
+        DescribeLogStreamsRequest describeLogStreamsRequest = DescribeLogStreamsRequest.builder().logGroupName(logGroupName).logStreamNamePrefix(logStreamName).build();
 
         Optional<LogStream> logStreamOptional = awsLogsClient
                 .describeLogStreams(describeLogStreamsRequest)
-                .getLogStreams()
+                .logStreams()
                 .stream()
-                .filter(logStream -> logStream.getLogStreamName().equals(logStreamName))
+                .filter(logStream -> logStream.logStreamName().equals(logStreamName))
                 .findFirst();
 
         if (!logStreamOptional.isPresent()) {
             Logger.getLogger(this.getClass()).info("About to create LogStream: " + logStreamName + "in LogGroup: " + logGroupName);
-            CreateLogStreamRequest createLogStreamRequest = new CreateLogStreamRequest().withLogGroupName(logGroupName).withLogStreamName(logStreamName);
+            CreateLogStreamRequest createLogStreamRequest = CreateLogStreamRequest.builder().logGroupName(logGroupName).logStreamName(logStreamName).build();
             awsLogsClient.createLogStream(createLogStreamRequest);
         }
 
