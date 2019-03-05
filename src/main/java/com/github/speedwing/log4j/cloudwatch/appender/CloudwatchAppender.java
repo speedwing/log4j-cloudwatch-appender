@@ -139,7 +139,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
 
                     PutLogEventsRequest putLogEventsRequest = PutLogEventsRequest.builder()
                             .logGroupName(logGroupName)
-                            .logGroupName(logStreamName)
+                            .logStreamName(logStreamName)
                             .logEvents(inputLogEvents).build();
 
                     try {
