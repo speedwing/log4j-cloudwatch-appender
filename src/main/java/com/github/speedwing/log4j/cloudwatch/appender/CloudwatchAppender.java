@@ -203,9 +203,7 @@ public class CloudwatchAppender extends AppenderSkeleton {
             Logger.getRootLogger().error("Could not initialise CloudwatchAppender because either or both LogGroupName(" + logGroupName + ") and LogStreamName(" + logStreamName + ") are null or empty");
             this.close();
         } else {
-            this.awsLogsClient = CloudWatchLogsClient.builder()
-                    .region(this.getAwsRegion())
-                    .build();
+            this.awsLogsClient = initializeCloudwatchLogsClient();
             loggingEventsQueue = new LinkedBlockingQueue<>(queueLength);
             try {
                 initializeCloudwatchResources();
@@ -220,6 +218,18 @@ public class CloudwatchAppender extends AppenderSkeleton {
                 }
             }
         }
+    }
+
+    /**
+     * This method is responsible for initializing a the CW-client. It should be overridden if additional
+     * settings are needed.
+     *
+     * @return an initialized {@link CloudWatchLogsClient}
+     */
+    protected CloudWatchLogsClient initializeCloudwatchLogsClient() {
+        return CloudWatchLogsClient.builder()
+                .region(this.getAwsRegion())
+                .build();
     }
 
     private void initCloudwatchDaemon() {
