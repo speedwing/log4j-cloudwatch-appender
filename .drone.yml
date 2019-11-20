@@ -9,6 +9,7 @@ steps:
       - ls -lart
       - mvn clean test compile
 
+
 trigger:
   branch:
     - drone-test
