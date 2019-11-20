@@ -7,7 +7,7 @@ steps:
     image: maven:3-jdk-8
     commands:
       - ls -lart
-      - mvn clean compile
+      - mvn clean test compile
 
 trigger:
   branch:
