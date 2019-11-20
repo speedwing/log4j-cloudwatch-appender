@@ -1,8 +1,13 @@
 kind: pipeline
+type: docker
 name: default
 
 steps:
   - name: test
     image: maven:3-jdk-10
     commands:
-      - mvn test -B
+      - mvn clean test
+
+trigger:
+  branch:
+    - drone-test
