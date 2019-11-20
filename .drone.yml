@@ -4,9 +4,9 @@ name: default
 
 steps:
   - name: test
-    image: maven:3-jdk-10
+    image: maven:3-jdk-8
     commands:
-      - mvn clean test
+      - mvn clean compile
 
 trigger:
   branch:
